@@ -1,3 +1,7 @@
+# Sent this in the slack but this is a really rough but working idea of the example of http://mnemstudio.org/path-finding-q-learning-tutorial.htm
+# This follows the whole process shown there, and comes out to the same answer if you run it enough times. Mine does
+# 1000 tests which is definitely enough.
+
 import numpy
 from random import randint
 q = numpy.zeros((6, 6))
