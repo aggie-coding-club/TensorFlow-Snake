@@ -1,8 +1,16 @@
 import tkinter as tk
-import sys
 import time
-from random import randint
+import numpy as np
 
+
+''' Changes:
+- Now the snake cannot do 180 degree turns
+- Fixed program closing
+- Added variable pizelsize to class Game
+- Minor Stuff
+
+Luis F
+'''
 # Program generates Game with given constraints and allows user to move randomly placed white box with WASD
 
 # Game is a class that inherits Tkinter Frame. It not only implements the GUI, but as of now handles game mechanics
@@ -18,11 +26,15 @@ class Game(tk.Frame):
         self.parent = parent  # local instance of Game parameter parent
         self.moveXDot = 0  # Integer that represents relative horizontal movement
         self.moveYDot = 0  # Integer that represents relative vertical movement
+        if 'pixelsize' in kwargs:
+            self.pixelsize = kwargs.get('pixelsize')
+        else:
+            self.pixelsize = 50
         if 'height' in kwargs and 'width' in kwargs:
-            self.pixelsWide = int(kwargs.get('width')/50)  # How wide the board is. Default size of each is set to 50
+            self.pixelsWide = kwargs.get('width')//self.pixelsize  # How wide the board is. Default size of each is set to 50
             # int(value) effectively works as floor(value) for our needs. We do not deal with negative numbers, ...
             # ...so truncation is fine
-            self.pixelsHigh = int(kwargs.get('height')/50)  # How tall the board is. Default size of each is set to 50
+            self.pixelsHigh = kwargs.get('height')//self.pixelsize  # How tall the board is. Default size of each is set to 50
         # else: fixme throw error if width or height are non existent or invalid(maybe before frame initialization)
         self.xDot = randint(0, self.pixelsWide-1)  # Represents random initial horizontal location of moving box for now
         self.yDot = randint(0, self.pixelsHigh-1)  # Represents random initial vertical location of moving box for now
@@ -31,28 +43,33 @@ class Game(tk.Frame):
             self.pixels.append([])
             for y in range(self.pixelsHigh):
                 self.pixels[x].append(tk.Label(self, borderwidth="2", relief="groove", background='black'))
-                self.pixels[x][y].place(x=x*50, y=y*50, height=50, width=50)
+                self.pixels[x][y].place(x=x*self.pixelsize, y=y*self.pixelsize, height = self.pixelsize, width = self.pixelsize)
         self.pixels[self.xDot][self.yDot].configure(background='white')
 
     # The following function sets the relative movement parameters for right movement of the moving box
     def moveRight(self, event):
-        self.moveXDot = 1
-        self.moveYDot = 0
+        if self.moveXDot == 0: # Blocks the snake from doing 180 degree turns
+            self.moveXDot = 1
+            self.moveYDot = 0
 
     # The following function sets the relative movement parameters for for left movement the moving box
     def moveLeft(self, event):
-        self.moveXDot = -1
-        self.moveYDot = 0
+        if self.moveXDot == 0:
+            self.moveXDot = -1
+            self.moveYDot = 0
 
     # The following function sets the relative movement parameters for for upwards movement the moving box
     def moveUp(self, event):
-        self.moveXDot = 0
-        self.moveYDot = -1
+        if self.moveYDot == 0:
+            self.moveXDot = 0
+            self.moveYDot = -1
 
     # The following function sets the relative movement parameters for for downwards movement the moving box
     def moveDown(self, event):
-        self.moveXDot = 0
-        self.moveYDot = 1
+        if self.moveYDot == 0:
+            self.moveXDot = 0
+            self.moveYDot = 1
+
 
     # The following function moves the box
     def move(self):
@@ -64,6 +81,10 @@ class Game(tk.Frame):
             self.xDot += self.moveXDot
             self.yDot += self.moveYDot
 
+    # The following function closes the window
+    def close(self, event):
+        self.destroy()
+
 
 def main():
     root = tk.Tk()  # The root or parent window of the game board
@@ -74,7 +95,7 @@ def main():
     root.resizable(width=False, height=False)
     root.title("Snake")
     board = Game(root, background='red',  width=GAME_WIDTH, height=GAME_HEIGHT)  # The instantiation of the Game Board
-    root.bind('<Escape>', sys.exit)
+    root.bind('<Escape>', board.close)
     root.bind('<d>', board.moveRight)
     root.bind('<a>', board.moveLeft)
     root.bind('<w>', board.moveUp)
