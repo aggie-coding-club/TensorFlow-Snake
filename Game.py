@@ -74,17 +74,7 @@ class Game(tk.Frame):
             self.pixels[xbound][ybound].configure(background='white')
             self.xDot += self.moveXDot
             self.yDot += self.moveYDot
-      """  else:
-            self.close() """
-
-    # The following function closes the window
-   """ def close(self, event):
-        self.destroy()
-        #sys.exit()
-    def close(self):
-        self.destroy()
-        #sys.exit() """
-
+ 
 
 def main():
     root = tk.Tk()  # The root or parent window of the game board
