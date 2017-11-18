@@ -1,15 +1,12 @@
 import tkinter as tk
 import time
-import numpy as np
+from random import randint
+#import numpy as np
+import sys
 
 
 ''' Changes:
-- Now the snake cannot do 180 degree turns
-- Fixed program closing
-- Added variable pizelsize to class Game
-- Minor Stuff
-
-Luis F
+-Deleted Luis F
 '''
 # Program generates Game with given constraints and allows user to move randomly placed white box with WASD
 
@@ -26,10 +23,7 @@ class Game(tk.Frame):
         self.parent = parent  # local instance of Game parameter parent
         self.moveXDot = 0  # Integer that represents relative horizontal movement
         self.moveYDot = 0  # Integer that represents relative vertical movement
-        if 'pixelsize' in kwargs:
-            self.pixelsize = kwargs.get('pixelsize')
-        else:
-            self.pixelsize = 50
+        self.pixelsize = 50
         if 'height' in kwargs and 'width' in kwargs:
             self.pixelsWide = kwargs.get('width')//self.pixelsize  # How wide the board is. Default size of each is set to 50
             # int(value) effectively works as floor(value) for our needs. We do not deal with negative numbers, ...
@@ -43,7 +37,7 @@ class Game(tk.Frame):
             self.pixels.append([])
             for y in range(self.pixelsHigh):
                 self.pixels[x].append(tk.Label(self, borderwidth="2", relief="groove", background='black'))
-                self.pixels[x][y].place(x=x*self.pixelsize, y=y*self.pixelsize, height = self.pixelsize, width = self.pixelsize)
+                self.pixels[x][y].place(x=x*self.pixelsize, y=y*self.pixelsize, height=self.pixelsize, width=self.pixelsize)
         self.pixels[self.xDot][self.yDot].configure(background='white')
 
     # The following function sets the relative movement parameters for right movement of the moving box
@@ -80,10 +74,16 @@ class Game(tk.Frame):
             self.pixels[xbound][ybound].configure(background='white')
             self.xDot += self.moveXDot
             self.yDot += self.moveYDot
+      """  else:
+            self.close() """
 
     # The following function closes the window
-    def close(self, event):
+   """ def close(self, event):
         self.destroy()
+        #sys.exit()
+    def close(self):
+        self.destroy()
+        #sys.exit() """
 
 
 def main():
@@ -95,7 +95,7 @@ def main():
     root.resizable(width=False, height=False)
     root.title("Snake")
     board = Game(root, background='red',  width=GAME_WIDTH, height=GAME_HEIGHT)  # The instantiation of the Game Board
-    root.bind('<Escape>', board.close)
+    root.bind('<Escape>', sys.exit)
     root.bind('<d>', board.moveRight)
     root.bind('<a>', board.moveLeft)
     root.bind('<w>', board.moveUp)
