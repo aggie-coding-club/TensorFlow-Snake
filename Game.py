@@ -130,8 +130,8 @@ class Game(tk.Frame):
 
                 else:
                     self.__addSnake(self.pixels[xNext][yNext])
-                    self.__remSnake()
                     self.snake.insert(0, self.snake[0])
+                    self.__remSnake()
                     self.__placeApple()
 
             else:
