@@ -58,7 +58,6 @@ class Game(tk.Frame):
                 self.pixels[x][y].place(x=x * 50, y=y * 50, height=50, width=50)
                 self.pixels[x][y].setPos(x, y)
         self.__placeApple()
-
         for x in range(4):
             self.__addSnake(self.pixels[x][10])
 
@@ -80,7 +79,8 @@ class Game(tk.Frame):
 
     # The following function sets the backend of snake black and removes it from the snake. Used for movement
     def __remSnake(self):
-        self.snake[0].configure(background='black')
+        if self.snake.count(self.snake[0]) == 1:
+            self.snake[0].configure(background='black')
         del self.snake[0]
 
     def setRight(self, event):
@@ -131,17 +131,14 @@ class Game(tk.Frame):
                 else:
                     self.__addSnake(self.pixels[xNext][yNext])
                     self.__remSnake()
-                    x = 2 * self.snake[0].getX() - self.snake[1].getX()
-                    y = 2 * self.snake[0].getY() - self.snake[1].getY()
-                    self.pixels[x][y].configure(background='white')
-                    self.snake.insert(0, self.pixels[x][y])
+                    self.snake.insert(0, self.snake[0])
                     self.__placeApple()
 
             else:
                 # self.parent.quit() --> exits program on game over
                 self.__printSnake()
                 return
-        self.parent.after(200, self.move) # New way to set "speed" in ms
+        self.parent.after(100, self.move) # New way to set "speed" in ms
 
 
 def main():
