@@ -2,6 +2,7 @@ import tkinter as tk
 # import time
 from random import randint
 import sys
+import numpy as np
 
 
 # The Program allows a user to play the Snake game once until a loss.
@@ -55,7 +56,7 @@ class Game(tk.Frame):
             self.pixels.append([])
             for y in range(self.pixelsHigh):
                 self.pixels[x].append(Pixel(self, borderwidth="2", relief="groove", background='black'))
-                self.pixels[x][y].place(x=x * 50, y=y * 50, height=50, width=50)
+                self.pixels[x][y].place(x=x * 30, y=y * 30, height=30, width=30)
                 self.pixels[x][y].setPos(x, y)
         self.__placeApple()
         for x in range(4):
@@ -140,14 +141,25 @@ class Game(tk.Frame):
                 return
         self.parent.after(100, self.move) # New way to set "speed" in ms
 
+    def get_state(self):
+        state = np.array[20,20]
+        for x in range(0,20):
+            for y in range(0,20):
+                state[x,y] = ' '
+        state[self.snake.getX(),self.snake.getY()] = '>' # head
+        state[self.apple.getX(), self.apple.getY()] = 'o' # apple
+        # body
+        for i in range(1, len(self.snake)):
+            state[self.snake[i].getX(), self.snake[i].getY()] = '='
+        return state
 
 def main():
     root = tk.Tk()  # The root or parent window of the game board
-    GAME_WIDTH = 1000  # Represents the width in pixels of the game board and window
-    GAME_HEIGHT = 1000  # Represents the height in pixels of the game board and window
+    GAME_WIDTH = 998  # Represents the width in pixels of the game board and window
+    GAME_HEIGHT = 998  # Represents the height in pixels of the game board and window
     # GAME_SPEED = .2  # Represents the "speed" of movement. Depreciated as of now
     root.geometry('{}x{}'.format(GAME_WIDTH, GAME_HEIGHT))
-    root.resizable(width=False, height=False)
+    root.resizable(width=True, height=True)
     root.title("Snake")
     board = Game(root, background='red', width=GAME_WIDTH, height=GAME_HEIGHT)  # The instantiation of the Game Board
     root.bind('<Escape>', sys.exit)
@@ -156,6 +168,7 @@ def main():
     root.bind('<w>', board.setUp)
     root.bind('<s>', board.setDown)
     board.move()
+    print(board.get_state())
     root.mainloop()
 
 
