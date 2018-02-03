@@ -1,5 +1,5 @@
 import tkinter as tk
-# import time
+import time
 from random import randint
 import sys
 import numpy as np
@@ -56,7 +56,7 @@ class Game(tk.Frame):
             self.pixels.append([])
             for y in range(self.pixelsHigh):
                 self.pixels[x].append(Pixel(self, borderwidth="2", relief="groove", background='black'))
-                self.pixels[x][y].place(x=x * 30, y=y * 30, height=30, width=30)
+                self.pixels[x][y].place(x=x * 50, y=y * 50, height=50, width=50)
                 self.pixels[x][y].setPos(x, y)
         self.__placeApple()
         for x in range(4):
@@ -115,31 +115,35 @@ class Game(tk.Frame):
 
     # The following function "moves" the snake
     def move(self):
-        if not (self.xVel == 0 and self.yVel == 0):
-            xNext = self.snake[len(self.snake)-1].getX() + self.xVel
-            yNext = self.snake[len(self.snake)-1].getY() + self.yVel
-            if 0 <= xNext < self.pixelsWide and 0 <= yNext < self.pixelsHigh:
+        while True:
+            if not (self.xVel == 0 and self.yVel == 0):
+                xNext = self.snake[len(self.snake)-1].getX() + self.xVel
+                yNext = self.snake[len(self.snake)-1].getY() + self.yVel
+                if 0 <= xNext < self.pixelsWide and 0 <= yNext < self.pixelsHigh:
 
-                if self.snake[len(self.snake)-1] != self.apple:
-                    self.__addSnake(self.pixels[xNext][yNext])
-                    self.__remSnake()
-                    for x in range(0, len(self.snake)-1):
-                        if self.snake[x] == self.snake[len(self.snake)-1]:
-                            self.__printSnake()
-                            self.snake[x].configure(background='red')
-                            return
+                    if self.snake[len(self.snake)-1] != self.apple:
+                        self.__addSnake(self.pixels[xNext][yNext])
+                        self.__remSnake()
+                        for x in range(0, len(self.snake)-1):
+                            if self.snake[x] == self.snake[len(self.snake)-1]:
+                                self.__printSnake()
+                                self.snake[x].configure(background='red')
+                                return
+
+                    else:
+                        self.__addSnake(self.pixels[xNext][yNext])
+                        self.snake.insert(0, self.snake[0])
+                        self.__remSnake()
+                        self.__placeApple()
 
                 else:
-                    self.__addSnake(self.pixels[xNext][yNext])
-                    self.snake.insert(0, self.snake[0])
-                    self.__remSnake()
-                    self.__placeApple()
-
-            else:
-                # self.parent.quit() --> exits program on game over
-                self.__printSnake()
-                return
-        self.parent.after(100, self.move) # New way to set "speed" in ms
+                    # self.parent.quit() --> exits program on game over
+                    self.__printSnake()
+                    return
+            # print(self.get_state())
+            self.parent.update()
+            time.sleep(.1) # This method might cause issues with tensorFlow. If anyone sees this, please remind.
+        # self.parent.after(100, self.move) # Old New way to set "speed" in ms
 
     def get_state(self):
         state = np.array[20,20]
@@ -155,11 +159,11 @@ class Game(tk.Frame):
 
 def main():
     root = tk.Tk()  # The root or parent window of the game board
-    GAME_WIDTH = 998  # Represents the width in pixels of the game board and window
-    GAME_HEIGHT = 998  # Represents the height in pixels of the game board and window
+    GAME_WIDTH = 1000  # Represents the width in pixels of the game board and window
+    GAME_HEIGHT = 1000  # Represents the height in pixels of the game board and window
     # GAME_SPEED = .2  # Represents the "speed" of movement. Depreciated as of now
-    root.geometry('{}x{}'.format(GAME_WIDTH, GAME_HEIGHT))
-    root.resizable(width=True, height=True)
+    root.geometry('%dx%d+%d+%d'%(GAME_WIDTH, GAME_HEIGHT,0,0))
+    root.resizable(width=False, height=False)
     root.title("Snake")
     board = Game(root, background='red', width=GAME_WIDTH, height=GAME_HEIGHT)  # The instantiation of the Game Board
     root.bind('<Escape>', sys.exit)
@@ -168,7 +172,7 @@ def main():
     root.bind('<w>', board.setUp)
     root.bind('<s>', board.setDown)
     board.move()
-    print(board.get_state())
+    # print(board.get_state()) Unable to get function error free as-is. Please fix and push
     root.mainloop()
 
 
