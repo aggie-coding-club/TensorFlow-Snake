@@ -1,180 +1,199 @@
-import tkinter as tk
-import time
-from random import randint
-import sys
-import numpy as np
+from PyQt5.QtWidgets import QWidget, QApplication
+from PyQt5.QtGui import QPainter, QColor, QBrush, QPen
+from PyQt5.QtCore import QTimer, Qt
+import sys, random
 
+# This Program is the game of Snake
 
-# The Program allows a user to play the Snake game once until a loss.
+# Function that defines an returns a dictionary of a box's grid coordinates
+# Probably would be more straightforward if defined as a class, but I was experiencing issues tedious to work around.
+# Specifically, "in" did not work for me as expected when defined as class (i.e box in bits, x in list)
+# If my issue is not unique, I suppose box could be converted to a class, but at the cost of additional code
+# Basically, I'm pretty sure we would have to perform linear searches on the snake and compare each of box's members
+# A dictionary serves as a "compromise" for now because it gives us more readable syntax (e.g. Accessing 'x')
+def box(x, y):
+    return {
+        'x': x,
+        'y': y
+    }
 
-# Pixel is a class that inherits Tkinter Label. It is a Label that allows you to store relative positions
-class Pixel(tk.Label):
-    # The following function is the Pixel Class constructor. It overwrites the constructor for the Tkinter Frame
-    # self is a reference to the particular instance of Game
-    # parent is the parent, or "root", that the Game will be placed on
-    # *args is a dictionary, or list, representing the non-keyworded arguments passed into Game
-    # **kwargs is a dictionary, or list, representing the keyworded arguments passed into Game
-    def __init__(self, parent, *args, **kwargs):
-            tk.Label.__init__(self, parent, *args, **kwargs)
-            self.configure(borderwidth="2", relief="groove", background='black')
-            self.xPos = 0  # Integer representation of the relative x position of the pixel
-            self.yPos = 0  # Integer representation of the relative y position of the pixel
+# Class that contains the Snake and all its behaviors
+# A snake is comprised of a series of boxes, in this case a list of boxes named bits
+# The snake maintains its velocity (vel) and moves with respect to it
+# It receives/decodes commands that ask it to change its velocity
+# Also, it grows when it is required to grow
+class Snake:
 
-    # The following function sets the values of the xPos and yPos integers
-    def setPos(self, xPos, yPos):
-        self.xPos = xPos
-        self.yPos = yPos
+    # A dictionary that maps specific key presses to a tuple of velocities x and y respectively.
+    moveSet = {
+        'W': (0, -1),
+        'A': (-1, 0),
+        'S': (0, 1),
+        'D': (1, 0)
+    }
 
-    # The following function returns the value of xPos
-    def getX(self):
-        return self.xPos
+    # Constructor for the Snake Class
+    # It assigns an initial box to bits and sets its velocity (and next velocity) to 0
+    def __init__(self):
 
-    # The following function returns the value of yPos
-    def getY(self):
-        return self.yPos
+        self.bits = []  # List that maintains all boxes in the snake. bits[0] is the head
+        self.bits.append(box(0, 0))
+        self.vel = (0, 0)  # A tuple of the current relative x and y velocities
+        self.nextVel = (0, 0)  # A tuple of the next velocities. Used to restrict illegal moves
 
-# Game is a class that inherits Tkinter Frame. It not only implements the GUI, but as of now handles game mechanics
-class Game(tk.Frame):
-    # The following function is the Game Class constructor. It overwrites the constructor for the Tkinter Frame
-    # self is a reference to the particular instance of Game
-    # parent is the parent, or "root", that the Game will be placed on
-    # *args is a dictionary, or list, representing the non-keyworded arguments passed into Game
-    # **kwargs is a dictionary, or list, representing the keyworded arguments passed into Game
-    def __init__(self, parent, *args, **kwargs):
-        tk.Frame.__init__(self, parent, *args, **kwargs) # Initializes Game as a frame
-        self.place(x=0, y=0)
-        self.parent = parent  # Local instance of Game parameter parent
-        self.xVel = 1  # Integer that represents relative horizontal movement
-        self.yVel = 0  # Integer that represents relative vertical movement
-        self.pixels = []  # Array of Pixels that represents the individual pixels/tiles/spots/boxes
-        self.snake = []  # Array of Pixels that represents the pixels specifically in the Snake
-        self.apple = 0  # Pixel representing the apple the snake eats to grow and gain points. Initially set to null
-        if 'height' in kwargs and 'width' in kwargs:
-            self.pixelsWide = kwargs.get('width') // 50
-            self.pixelsHigh = kwargs.get('height') // 50
-        for x in range(self.pixelsWide):
-            self.pixels.append([])
-            for y in range(self.pixelsHigh):
-                self.pixels[x].append(Pixel(self, borderwidth="2", relief="groove", background='black'))
-                self.pixels[x][y].place(x=x * 50, y=y * 50, height=50, width=50)
-                self.pixels[x][y].setPos(x, y)
-        self.__placeApple()
-        for x in range(4):
-            self.__addSnake(self.pixels[x][10])
+    # Adds a box to bits, and thus lengthens the snake
+    def addBit(self):
+        self.bits.append(box(self.bits[0]['x']-self.vel[0], self.bits[0]['y']-self.vel[1]))
 
-    #  The following function places the apple in a random and valid location (not on Snake, not out of bounds, etc.)
-    def __placeApple(self):
-        x = randint(0, self.pixelsWide - 1)
-        y = randint(0, self.pixelsHigh - 1)
-        while self.pixels[x][y] in self.snake:
-            x = randint(0, self.pixelsWide - 1)
-            y = randint(0, self.pixelsHigh - 1)
-        self.apple = self.pixels[x][y]
-        self.apple.configure(background='green')
+    # Returns true and moves the snake if possible, else simply returns false (and ends the game by extension)
+    # boardWidth is one over the furthest right position of the head
+    # boardHeight is one over the furthest downward position of the head
+    # Both boardWidth and boardHeight are used to check if the snake has tried to move out of bounds
+    # Comment: Not really an elegant solution. Please replace/move if you think you have a better idea.
+    def tryMove(self, boardWidth, boardHeight):
+        self.vel = self.nextVel
+        if self.bits[0]['x'] + self.vel[0] == boardWidth or self.bits[0]['x'] + self.vel[0] == -1:
+            return False
+        if self.bits[0]['y'] + self.vel[1] == boardHeight or self.bits[0]['y'] + self.vel[1] == -1:
+            return False
+        for i in range(len(self.bits) - 1, 0, -1):
+            self.bits[i]['x'] = self.bits[i-1]['x']
+            self.bits[i]['y'] = self.bits[i-1]['y']
+        self.bits[0]['x'] += self.vel[0]
+        self.bits[0]['y'] += self.vel[1]
 
-    # The following function adds pixel to snake and sets it white
-    # pixel is the specific pixel that is being added to the snake
-    def __addSnake(self, pixel):
-        self.snake.append(pixel)
-        self.snake[len(self.snake) - 1].configure(background='white')
+        return False if self.bits[0] in self.bits[1:] else True
 
-    # The following function sets the backend of snake black and removes it from the snake. Used for movement
-    def __remSnake(self):
-        if self.snake.count(self.snake[0]) == 1:
-            self.snake[0].configure(background='black')
-        del self.snake[0]
+    # Assigns nextVel to a potential velocity if it is a legal move
+    # potVel is the command given for the potential velocity
+    def setVel(self, potVel):
+        if self.moveSet[potVel][0] == -self.vel[0] and self.moveSet[potVel][1] == -self.vel[1]:
+            return
+        if self.moveSet[potVel] == self.nextVel:
+            return
+        self.nextVel = self.moveSet[potVel]
 
-    def setRight(self, event):
-        if self.xVel == 0:  # Blocks the snake from doing 180 degree turns
-            self.xVel = 1
-            self.yVel = 0
+# Class that contains the majority of GUI Elements and operates the game
+# It extends QWidget, which is a pretty basic Element in Qt. It does a lot of stuff, look it up in the API if curious
+class Window(QWidget):
 
-    # The following function sets the relative movement parameters for for left movement the moving box
-    def setLeft(self, event):
-        if self.xVel == 0:
-            self.xVel = -1
-            self.yVel = 0
+    # Constructor for the Window Class
+    # **kwargs is a dictionary of all named arguments passed
+    def __init__(self, **kwargs):
+        super().__init__()  # Calls the parent class (QWidget) constructor
 
-    # The following function sets the relative movement parameters for for upwards movement the moving box
-    def setUp(self, event):
-        if self.yVel == 0:
-            self.xVel = 0
-            self.yVel = -1
+        # The relative width of the board. Assigned by default to 8
+        self.boardWidth = kwargs['boardWidth'] if 'boardWidth' in kwargs else 8
+        # The relative height of the board. Assigned by default to 8
+        self.boardHeight = kwargs['boardHeight'] if 'boardHeight' in kwargs else 8
+        # The absolute width & height of any box of the board in pixels. By default, a box is 50x50 pixels
+        self.boxSize = kwargs['boxSize'] if 'boxSize' in kwargs else 50
+        # The interval at which the GUI refreshes, and thus the snake moves
+        interval = kwargs['interval'] if 'interval' in kwargs else 500
 
-    # The following function sets the relative movement parameters for for downwards movement the moving box
-    def setDown(self, event):
-        if self.yVel == 0:
-            self.xVel = 0
-            self.yVel = 1
+        # Instantiation of the Snake class. Creates the snake necessary for the game
+        self.snake = Snake()
+        self.placeApple()
 
-    # The following function prints the location of all pixels in snake
-    def __printSnake(self):
-        print(len(self.snake))
-        for x in range(0, len(self.snake)):
-            print("Snake: ", x, " - PosX: ", self.snake[x].getX(), " - PosY: ", self.snake[x].getY())
+        self.time = QTimer(self)  # A timer that sends a signal whenever the interval has been reached
+        self.time.setInterval(interval)
 
-    # The following function "moves" the snake
-    def move(self):
-        while True:
-            if not (self.xVel == 0 and self.yVel == 0):
-                xNext = self.snake[len(self.snake)-1].getX() + self.xVel
-                yNext = self.snake[len(self.snake)-1].getY() + self.yVel
-                if 0 <= xNext < self.pixelsWide and 0 <= yNext < self.pixelsHigh:
+        # Uses the concept of signals and slots integral to Qt
+        # Basically, calls whatever function (slot) I connect whenever a signal is sent by another function (signal)
+        # In this case time.timeout is the signal. It sends a signal whenever the interval has been reached
+        # It calls update, which is a method defined inside QWidget
+        # update does many things, but in this case effectively serves to refresh GUI and call paintEvent implicitly
+        self.time.timeout.connect(self.update)
+        self.time.start()
 
-                    if self.snake[len(self.snake)-1] != self.apple:
-                        self.__addSnake(self.pixels[xNext][yNext])
-                        self.__remSnake()
-                        for x in range(0, len(self.snake)-1):
-                            if self.snake[x] == self.snake[len(self.snake)-1]:
-                                self.__printSnake()
-                                self.snake[x].configure(background='red')
-                                return
+        self.init_ui()
 
-                    else:
-                        self.__addSnake(self.pixels[xNext][yNext])
-                        self.snake.insert(0, self.snake[0])
-                        self.__remSnake()
-                        self.__placeApple()
+    # Initialize all GUI components
+    def init_ui(self):
+        self.setStyleSheet('Background: grey')
 
-                else:
-                    # self.parent.quit() --> exits program on game over
-                    self.__printSnake()
-                    return
-            # print(self.get_state())
-            self.parent.update()
-            time.sleep(.1) # This method might cause issues with tensorFlow. If anyone sees this, please remind.
-        # self.parent.after(100, self.move) # Old New way to set "speed" in ms
+        width = self.boardWidth*self.boxSize
+        height = self.boardHeight*self.boxSize
+        self.setGeometry(0, 30, width, height)
+        self.show()
 
-    def get_state(self):
-        state = np.array[20,20]
-        for x in range(0,20):
-            for y in range(0,20):
-                state[x,y] = ' '
-        state[self.snake.getX(),self.snake.getY()] = '>' # head
-        state[self.apple.getX(), self.apple.getY()] = 'o' # apple
-        # body
-        for i in range(1, len(self.snake)):
-            state[self.snake[i].getX(), self.snake[i].getY()] = '='
-        return state
+    # paintEvent serves to call drawBoard on interval. It overrides the same method found within QWidget
+    # e is a QPaintEvent passed into paintEvent. I'm not sure what it does, but is required to properly override
+    def paintEvent(self, e):
+        paintr = QPainter()  # Object used to actually draw the board
+        paintr.begin(self)
+        self.drawBoard(paintr)
+        paintr.end()
 
-def main():
-    root = tk.Tk()  # The root or parent window of the game board
-    GAME_WIDTH = 1000  # Represents the width in pixels of the game board and window
-    GAME_HEIGHT = 1000  # Represents the height in pixels of the game board and window
-    # GAME_SPEED = .2  # Represents the "speed" of movement. Depreciated as of now
-    root.geometry('%dx%d+%d+%d'%(GAME_WIDTH, GAME_HEIGHT,0,0))
-    root.resizable(width=False, height=False)
-    root.title("Snake")
-    board = Game(root, background='red', width=GAME_WIDTH, height=GAME_HEIGHT)  # The instantiation of the Game Board
-    root.bind('<Escape>', sys.exit)
-    root.bind('<d>', board.setRight)
-    root.bind('<a>', board.setLeft)
-    root.bind('<w>', board.setUp)
-    root.bind('<s>', board.setDown)
-    board.move()
-    # print(board.get_state()) Unable to get function error free as-is. Please fix and push
-    root.mainloop()
+    # Draws the new game-state by calling supporting methods and checking if an apple has been eaten
+    # paintr is a QPainter object that is used to actually draw the board
+    def drawBoard(self, paintr):
+        self.drawApple(paintr)
+        self.drawSnake(paintr)
+
+        if self.apple in self.snake.bits:
+            self.snake.addBit()
+            self.placeApple()
+            self.drawApple(paintr)
+
+    # Draws the snake. Also ends the game if the snake has collided with an obstacle
+    # paintr is a QPainter object that is used to actually draw the board
+    def drawSnake(self, paintr):
+        paintr.setPen(QPen(QColor(0, 255, 0), 2, Qt.SolidLine))
+        paintr.setBrush(QBrush(QColor(80, 0, 0), Qt.SolidPattern))
+
+        size = self.boxSize
+
+        if self.snake.tryMove(self.boardWidth, self.boardHeight):
+            for b in self.snake.bits:
+                paintr.drawRect(b['x']*size, b['y']*size, size, size)
+        else:
+            self.time.stop()
+            for b in self.snake.bits[1:]:
+                paintr.drawRect(b['x']*size, b['y']*size, size, size)
+            paintr.setBrush(QBrush(QColor(255, 0, 0), Qt.SolidPattern))
+            paintr.drawRect(self.snake.bits[0]['x']*size, self.snake.bits[0]['y']*size, size, size)
+        self.printState()
+
+    # Draws the apple
+    # paintr is a QPainter object that is used to actually draw the board
+    def drawApple(self, paintr):
+
+        size = self.boxSize
+
+        paintr.setBrush(QBrush(QColor(191, 97, 0), Qt.SolidPattern))
+        paintr.setPen(QPen(QColor(0, 255, 0), 2, Qt.SolidLine))
+        paintr.drawRect(self.apple['x']*size, self.apple['y']*size, size, size)
+
+    # Places the apple until it is not inside snake (brute force, definitely better ways. Bad if large)
+    def placeApple(self):
+        self.apple = box(random.randint(0, self.boardWidth-1), random.randint(0, self.boardHeight-1))
+        while self.apple in self.snake.bits:
+            self.apple = box(random.randint(0, self.boardWidth-1), random.randint(0, self.boardHeight-1))
+
+    # Prints the current state of the game
+    # Preliminary attempt to represent the game-state for use in machine learning
+    def printState(self):
+        boardList = [(['*']*self.boardWidth) for i in range(self.boardHeight)]
+        for b in self.snake.bits[1:]:
+            boardList[b['y']][b['x']] = 'o'
+        boardList[self.snake.bits[0]['y']][self.snake.bits[0]['x']] = 'O'
+        boardList[self.apple['y']][self.apple['x']] = 'x'
+
+        for l in boardList:
+            print(l[:])
+        print('----------------------------------------------')
+
+    # Overrides method found within QWidget
+    # It is called whenever any key is pressed
+    # QKeyEvent is the ASCII code of the key pressed
+    def keyPressEvent(self, QKeyEvent):
+        key = chr(QKeyEvent.key())
+        if key in set('WASD'):
+            self.snake.setVel(key)
 
 
 if __name__ == '__main__':
-    main()
+    app = QApplication(sys.argv)  # Instantiation of QApplication required for Qt. It is the backbone.
+    w = Window(boardWidth=15, boardHeight=15)  # Instantiation of the Window class. Implicitly placed on app
+    sys.exit(app.exec_())  # Exits the game when app has terminated
