@@ -64,11 +64,11 @@ oneHot = tf.one_hot(inputState, 25)
 
 weight1 = tf.Variable(tf.random_normal([25, 50]))
 bias1 = tf.Variable(tf.random_normal([50]))
-layer1 = tf.nn.sigmoid(tf.matmul(oneHot, weight1) + bias1)
+layer1 = tf.nn.relu(tf.matmul(oneHot, weight1) + bias1)
 
 weight2 = tf.Variable(tf.random_normal([50, 50]))
 bias2 = tf.Variable(tf.random_normal([50]))
-layer2 = tf.nn.sigmoid(tf.matmul(layer1, weight2) + bias2)
+layer2 = tf.nn.relu(tf.matmul(layer1, weight2) + bias2)
 
 weightFinal = tf.Variable(tf.random_normal([50, 4]))
 biasFinal = tf.Variable(tf.random_normal([4]))
