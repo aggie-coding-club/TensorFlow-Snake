@@ -1,7 +1,22 @@
 import numpy as np
 import random as rand
+import copy
 from collections import deque
 
+
+class Representation:
+    """Structure for the game state data
+
+    Attributes:
+        state (np.array): The board state
+        reward (int): The reward for the previous action taken
+        action (int): The previous action taken
+    """
+
+    def __init__(self, state, reward, action):
+        self.state = copy.deepcopy(state)
+        self.reward = reward
+        self.action = copy.deepcopy(action)
 
 class Snake:
     """Encapsulates the Snake. It turns, moves and grows!
@@ -82,7 +97,7 @@ class Game:
         snake (Snake): Contains and mantains snake coordinates
     """
 
-    def __init__(self, board_width: int = 8, board_height: int = 8):
+    def __init__(self, board_width: int = 8, board_height: int = 8, turn_count: int = 100):
         """Game class initializer. Creates board, generates snake, places apple
 
         Args:
@@ -91,6 +106,8 @@ class Game:
         """
         self.board_width = board_width
         self.board_height = board_height
+        self.turn_count = turn_count
+        self.data_collector = []
 
         self.board = np.zeros((board_width, board_height))
         self.board[1][1] = 1
@@ -99,15 +116,22 @@ class Game:
 
         self.place_apple()
 
+        self.data_collector.append(Representation(self.board, 0, None))
+
         self.print_board()
 
-    def refresh_game_state(self, instruction: int):
+    def refresh_game_state(self, instruction: int) -> bool:
         """Performs action on game given an instruction. Changes state
 
         Args:
             instruction(int): Encoded instruction passed into snake.move()
+        Returns:
+            bool of valid game state
         """
         (rem_h, rem_w) = self.snake.move(instruction)
+        if not self.check_bounds():
+            self.data_collector.append(Representation(self.board, 0, instruction))
+            return False
         (new_h, new_w) = self.snake.body[0]
         if self.board[new_h][new_w] == 2:
             self.snake.grow((rem_h, rem_w))
@@ -117,7 +141,34 @@ class Game:
             self.board[new_h][new_w] = 1
             self.board[rem_h][rem_w] = 0
         # if np.any(self.snake.body[-1] != (rem_h, rem_w)):
+        self.data_collector.append(Representation(self.board, 0, instruction))
         self.print_board()
+        self.turn_count -= 1
+        if self.turn_count == 0:
+            return False
+        return True
+
+    def check_bounds(self) -> bool:
+        """Checks if the game state remains valid after move
+
+        Returns:
+            bool that is true if state remains valid and false otherwise
+        """
+        
+        # Check if Snake is out of bounds
+        (new_h, new_w) = self.snake.body[0]
+
+        if new_w < 0 or new_w >= self.board_width or new_h < 0 or new_h >= self.board_height:
+            print('Crashed Walls')
+            return False
+
+        # Check if head is i snake
+        if self.board[new_h][new_w] == 1:
+            print('Crashed Snake')
+            return False
+
+
+        return True
 
     def place_apple(self):
         """Places Apple on the on the board
@@ -137,6 +188,8 @@ class Game:
     def print_board(self):
         """Simply Prints the board for debugging purposes"""
         print(self.board)
+        # for i in range(len(self.data_collector)):
+        #    print(self.data_collector[i].state)
         print('\n---------------------------------------------------\n')
 
 
@@ -146,12 +199,23 @@ def cli_player(game: Game):
     Args:
         game (Game): The game we want to play!
     """
-    while True:
+    text = input()
+    while game.refresh_game_state(int(text)):
         text = input()
-        game.refresh_game_state(int(text))
+
+
+def random_player(game: Game):
+    """Simple RNG control of the game
+
+    Args:
+        game (Game): The game we want to play!
+    """
+    num = rand.randint(-1, 1)
+    while game.refresh_game_state(num):
+        num = rand.randint(-1, 1)
 
 
 if __name__ == '__main__':
     # print(TURN_CCW)
     # print(TURN_CW)
-    cli_player(Game())
+    random_player(Game())
